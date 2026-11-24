@@ -885,6 +885,8 @@ require('lazy').setup({
   },
   {
     'folke/snacks.nvim',
+    -- v2.28+ passes a Neovim 0.10-only option to nvim_get_hl().
+    tag = 'v2.25.0',
     priority = 1000,
     lazy = false,
     opts = {},
@@ -928,54 +930,24 @@ require('lazy').setup({
     'nvim-treesitter/nvim-treesitter',
     lazy = false,
     build = ':TSUpdate',
-    branch = 'main',
+    -- The rewritten main branch requires Neovim 0.12. v0.9.3 is the last
+    -- release compatible with the Neovim 0.9 series installed on this system.
+    tag = 'v0.9.3',
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter-intro`
     config = function()
-      -- ensure basic parser are installed
-      local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
+      -- tree-sitter-cli 0.26 removed the old --no-bindings flag, while this
+      -- compatible nvim-treesitter release still adds it automatically.
+      require('nvim-treesitter.install').ts_generate_args = { 'generate', '--abi', vim.treesitter.language_version }
 
-      require('nvim-treesitter').install(parsers)
-
-      ---@param buf integer
-      ---@param language string
-      local function treesitter_try_attach(buf, language)
-        -- check if parser exists and load it
-        local ok = pcall(vim.treesitter.language.add, language)
-        if not ok then return end
-        -- enables syntax highlighting and other treesitter features
-        vim.treesitter.start(buf, language)
-
-        -- enables treesitter based folds
-        -- for more info on folds see `:help folds`
-        -- vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
-        -- vim.wo.foldmethod = 'expr'
-
-        -- enables treesitter based indentation
-        vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
-      end
-
-      local available_parsers = require('nvim-treesitter').get_available()
-      vim.api.nvim_create_autocmd('FileType', {
-        callback = function(args)
-          local buf, filetype = args.buf, args.match
-
-          local language = vim.treesitter.language.get_lang(filetype)
-          if not language then return end
-
-          local installed_parsers = require('nvim-treesitter').get_installed 'parsers'
-
-          if vim.tbl_contains(installed_parsers, language) then
-            -- enable the parser if it is installed
-            treesitter_try_attach(buf, language)
-          elseif vim.tbl_contains(available_parsers, language) then
-            -- if a parser is available in `nvim-treesitter` auto install it, and enable it after the installation is done
-            require('nvim-treesitter').install(language):await(function() treesitter_try_attach(buf, language) end)
-          else
-            -- try to enable treesitter features in case the parser exists but is not available from `nvim-treesitter`
-            treesitter_try_attach(buf, language)
-          end
-        end,
-      })
+      require('nvim-treesitter.configs').setup {
+        -- Reuse the parser directory created by the newer plugin branch so
+        -- compatible parsers take precedence over its stale ABI-15 builds.
+        parser_install_dir = vim.fn.stdpath 'data' .. '/site',
+        ensure_installed = { 'bash', 'c', 'diff', 'html', 'latex', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'verilog', 'vim', 'vimdoc' },
+        auto_install = true,
+        highlight = { enable = true },
+        indent = { enable = true },
+      }
     end,
   },
 

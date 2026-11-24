@@ -23,4 +23,16 @@ return {
       end
     end,
   },
+  {
+    -- Live LaTeX preview. Requires the `texpresso` binary on $PATH
+    -- (build from https://github.com/let-def/texpresso).
+    'let-def/texpresso.vim',
+    ft = { 'tex', 'plaintex', 'bib' },
+    config = function()
+      vim.keymap.set('n', '<localleader>lp', '<cmd>TeXpresso %<CR>', { desc = 'TeXpresso live [p]review' })
+      if vim.fn.executable 'texpresso' == 0 then
+        vim.notify_once('texpresso.vim: `texpresso` binary not found on $PATH', vim.log.levels.WARN)
+      end
+    end,
+  },
 }
